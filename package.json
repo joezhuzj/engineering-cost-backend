@@ -6,7 +6,8 @@
   "scripts": {
     "start": "node server.js",
     "dev": "nodemon server.js",
-    "init-db": "node scripts/initDatabase.js"
+    "init-db": "node scripts/initDatabase.js",
+    "build": "npm run init-db"
   },
   "keywords": [
     "express",
