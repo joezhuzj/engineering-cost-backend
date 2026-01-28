@@ -7,8 +7,18 @@ const { sequelize, testConnection } = require('./config/database');
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// 中间件
-app.use(cors());
+// CORS配置 - 允许前端和管理后台访问
+const corsOptions = {
+  origin: [
+    'http://localhost:5173',
+    'http://localhost:3000',
+    'https://engineering-cost-frontend.onrender.com',
+    'https://engineering-cost-admin.onrender.com',
+    'https://engineering-cost-consulting.vercel.app'
+  ],
+  credentials: true
+};
+app.use(cors(corsOptions));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use('/uploads', express.static('uploads'));
