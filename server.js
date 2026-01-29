@@ -29,6 +29,7 @@ app.use('/api/auth', require('./routes/authRoutes'));
 app.use('/api/news', require('./routes/newsRoutes'));
 app.use('/api/cases', require('./routes/caseRoutes'));
 app.use('/api/contacts', require('./routes/contactRoutes'));
+app.use('/api/crawler', require('./routes/crawlerRoutes'));
 
 // 根路由
 app.get('/', (req, res) => {
