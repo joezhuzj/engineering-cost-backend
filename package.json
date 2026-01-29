@@ -7,6 +7,7 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "init-db": "node scripts/initDatabase.js",
+    "add-industry-news": "node scripts/addIndustryNews.js",
     "build": "echo Build complete"
   },
   "keywords": [
