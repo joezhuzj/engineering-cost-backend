@@ -1,7 +1,7 @@
-const { chromium } = require('playwright');
+const puppeteer = require('puppeteer');
 const { News, User } = require('../models');
 
-// 浙江造价网爬虫服务 - 使用Playwright模拟真实浏览器
+// 浙江造价网爬虫服务 - 使用Puppeteer模拟真实浏览器
 class CrawlerService {
   constructor() {
     this.baseUrl = 'https://www.zjzj.net';
@@ -23,12 +23,13 @@ class CrawlerService {
    * 创建浏览器实例
    */
   async createBrowser() {
-    return await chromium.launch({
-      headless: true, // 无头模式
+    return await puppeteer.launch({
+      headless: 'new',
       args: [
         '--no-sandbox',
         '--disable-setuid-sandbox',
-        '--disable-dev-shm-usage'
+        '--disable-dev-shm-usage',
+        '--disable-gpu'
       ]
     });
   }
@@ -37,16 +38,10 @@ class CrawlerService {
    * 创建页面并设置真实浏览器特征
    */
   async createPage(browser) {
-    const context = await browser.newContext({
-      userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-      viewport: { width: 1920, height: 1080 },
-      locale: 'zh-CN',
-      timezoneId: 'Asia/Shanghai'
-    });
+    const page = await browser.newPage();
     
-    const page = await context.newPage();
-    
-    // 设置请求头
+    await page.setUserAgent('Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
+    await page.setViewport({ width: 1920, height: 1080 });
     await page.setExtraHTTPHeaders({
       'Accept-Language': 'zh-CN,zh;q=0.9,en;q=0.8'
     });
@@ -82,6 +77,9 @@ class CrawlerService {
         window.scrollBy(0, 300);
       });
       await this.humanDelay(500, 1000);
+      
+      // 等待页面加载
+      await page.waitForSelector('.news-ul a', { timeout: 10000 }).catch(() => {});
       
       // 获取新闻列表
       const newsList = await page.evaluate((daysWithin, baseUrl) => {
