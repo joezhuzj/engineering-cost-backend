@@ -112,6 +112,44 @@ router.post('/delete', async (req, res) => {
 });
 
 /**
+ * 批量检查新闻是否已存在
+ * POST /api/crawler/check-exists
+ */
+router.post('/check-exists', async (req, res) => {
+  try {
+    const crawlerKey = req.headers['x-crawler-key'];
+    const cronKey = process.env.CRON_SECRET || 'zjzj-crawler-2026';
+    
+    if (crawlerKey !== cronKey) {
+      return res.status(403).json({ success: false, message: '无效的密钥' });
+    }
+    
+    const { titles } = req.body;
+    
+    if (!titles || !Array.isArray(titles) || titles.length === 0) {
+      return res.status(400).json({ success: false, message: '请提供标题数组' });
+    }
+    
+    // 查询已存在的标题
+    const existing = await News.findAll({
+      where: { title: titles },
+      attributes: ['title']
+    });
+    
+    const existingTitles = existing.map(n => n.title);
+    
+    res.json({
+      success: true,
+      existingTitles: existingTitles
+    });
+    
+  } catch (error) {
+    console.error('检查失败:', error);
+    res.status(500).json({ success: false, message: '检查失败: ' + error.message });
+  }
+});
+
+/**
  * 触发爬取浙江造价网新闻
  * POST /api/crawler/sync
  * 使用密钥验证

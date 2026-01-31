@@ -72,9 +72,24 @@ async function main() {
     );
     console.log(`  其中 ${toDelete.length} 条是爬取的新闻，将删除后重新同步`);
     
-    // 由于没有删除API，我们只能跳过已存在的
-    // 记录已存在的标题，用于后面跳过
-    const existingTitles = new Set(remoteNews.map(n => n.title));
+    // 删除旧的爬取新闻
+    if (toDelete.length > 0) {
+      const idsToDelete = toDelete.map(n => n.id);
+      console.log(`\n🗑️ 删除旧数据: ${idsToDelete.join(', ')}`);
+      
+      const deleteResult = await apiRequest('POST', '/api/crawler/delete', { ids: idsToDelete });
+      if (deleteResult.success) {
+        console.log(`  ✅ 已删除 ${deleteResult.deleted} 条新闻`);
+      } else {
+        console.log(`  ⚠️ 删除失败: ${deleteResult.message}`);
+      }
+    }
+    
+    // 记录保留的标题（非爬取的）
+    const keptNews = remoteNews.filter(n => 
+      !CRAWLED_TITLES.some(keyword => n.title.includes(keyword))
+    );
+    const existingTitles = new Set(keptNews.map(n => n.title));
     
     // 第二步：本地爬取新闻
     console.log('\n📥 第2步: 本地爬取新闻...');
@@ -87,25 +102,19 @@ async function main() {
     
     console.log(`✅ 找到 ${newsList.length} 条新闻`);
     
-    // 过滤出需要更新的（已存在但内容需要修复的）
-    const toUpdate = newsList.filter(n => existingTitles.has(n.title));
+    // 所有爬取的新闻都是新增（旧的已删除）
     const toAdd = newsList.filter(n => !existingTitles.has(n.title));
     
-    console.log(`  需要更新: ${toUpdate.length} 条`);
     console.log(`  需要新增: ${toAdd.length} 条`);
     
     // 第三步：处理需要更新的新闻（使用特殊标记）
     console.log('\n📤 第3步: 同步新闻到远程服务器...\n');
     
-    let updated = 0, added = 0, failed = 0;
+    let added = 0, failed = 0;
     
-    // 合并处理
-    const allNews = [...toUpdate, ...toAdd];
-    
-    for (const news of allNews) {
+    for (const news of toAdd) {
       try {
-        const isUpdate = existingTitles.has(news.title);
-        console.log(`  ${isUpdate ? '更新' : '新增'}: ${news.title.substring(0, 35)}...`);
+        console.log(`  新增: ${news.title.substring(0, 35)}...`);
         
         await crawlerService.humanDelay(2000, 4000);
         
@@ -114,7 +123,7 @@ async function main() {
         
         // 构建新闻数据
         const newsData = {
-          title: isUpdate ? news.title + ' ' : news.title, // 更新时加空格区分
+          title: news.title,
           category: 'industry',
           excerpt: `来源：${news.source}，发布日期：${news.dateText}`,
           content: content + `\n\n原文链接：${news.url}`,
@@ -137,7 +146,7 @@ async function main() {
             console.log(`    ⏭️ 已存在，跳过`);
           } else {
             console.log(`    ✅ 完成 (附件: ${attachments.length}个)`);
-            if (isUpdate) updated++; else added++;
+            added++;
           }
         } else {
           console.log(`    ❌ 失败: ${result.message}`);
@@ -152,13 +161,9 @@ async function main() {
     
     console.log('\n' + '='.repeat(50));
     console.log('📊 同步结果:');
-    console.log(`   更新: ${updated} 条`);
     console.log(`   新增: ${added} 条`);
     console.log(`   失败: ${failed} 条`);
     console.log('='.repeat(50));
-    
-    console.log('\n⚠️ 注意: 由于API限制，更新的新闻标题末尾会多一个空格');
-    console.log('   建议手动在后台删除旧数据，然后重新运行 syncToRemote.js');
     
   } catch (error) {
     console.error('\n❌ 同步失败:', error.message);
