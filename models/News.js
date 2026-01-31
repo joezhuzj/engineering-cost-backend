@@ -56,6 +56,18 @@ const News = sequelize.define('News', {
     type: DataTypes.INTEGER,
     allowNull: true,
     comment: '作者ID'
+  },
+  attachments: {
+    type: DataTypes.TEXT,
+    allowNull: true,
+    comment: '附件列表JSON，格式：[{name, url, size, type}]',
+    get() {
+      const value = this.getDataValue('attachments');
+      return value ? JSON.parse(value) : [];
+    },
+    set(value) {
+      this.setDataValue('attachments', value ? JSON.stringify(value) : null);
+    }
   }
 }, {
   tableName: 'news',

@@ -20,7 +20,7 @@ router.post('/submit', async (req, res) => {
       });
     }
     
-    const { title, category, excerpt, content, badge, status, publish_date } = req.body;
+    const { title, category, excerpt, content, badge, status, publish_date, attachments } = req.body;
     
     if (!title) {
       return res.status(400).json({
@@ -53,7 +53,8 @@ router.post('/submit', async (req, res) => {
       badge: badge || '政策',
       status: status || 'published',
       publish_date: publish_date ? new Date(publish_date) : new Date(),
-      author_id: admin.id
+      author_id: admin.id,
+      attachments: attachments || null
     });
     
     console.log(`✅ 爬虫提交新闻: ${title}`);

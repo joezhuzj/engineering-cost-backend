@@ -8,8 +8,9 @@ exports.getAll = async (req, res) => {
       page = 1, 
       limit = 10, 
       category, 
-      status = 'published',
-      search 
+      status,
+      search,
+      title
     } = req.query;
 
     const offset = (page - 1) * limit;
@@ -17,7 +18,18 @@ exports.getAll = async (req, res) => {
 
     // 筛选条件
     if (category) where.category = category;
-    if (status) where.status = status;
+    // 只有当status有明确值时才添加筛选（不传或传空串则不筛选）
+    if (status !== undefined && status !== '') {
+      where.status = status;
+    } else if (status === undefined) {
+      // 如果完全不传status参数，默认只显示已发布的（前端网站使用）
+      where.status = 'published';
+    }
+    // 如果传递空字符串，则不添加status筛选（管理后台使用）
+    
+    if (title) {
+      where.title = { [Op.like]: `%${title}%` };
+    }
     if (search) {
       where[Op.or] = [
         { title: { [Op.like]: `%${search}%` } },
@@ -97,7 +109,7 @@ exports.getOne = async (req, res) => {
 // 创建新闻
 exports.create = async (req, res) => {
   try {
-    const { title, category, excerpt, content, cover_image, badge, publish_date, status } = req.body;
+    const { title, category, excerpt, content, cover_image, badge, publish_date, status, attachments } = req.body;
 
     if (!title || !content) {
       return res.status(400).json({
@@ -115,7 +127,8 @@ exports.create = async (req, res) => {
       badge,
       publish_date: publish_date || new Date(),
       status: status || 'draft',
-      author_id: req.user.id
+      author_id: req.user.id,
+      attachments: attachments || null
     });
 
     res.status(201).json({
@@ -136,7 +149,7 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
   try {
     const { id } = req.params;
-    const { title, category, excerpt, content, cover_image, badge, publish_date, status } = req.body;
+    const { title, category, excerpt, content, cover_image, badge, publish_date, status, attachments } = req.body;
 
     const news = await News.findByPk(id);
 
@@ -155,7 +168,8 @@ exports.update = async (req, res) => {
       cover_image: cover_image !== undefined ? cover_image : news.cover_image,
       badge: badge !== undefined ? badge : news.badge,
       publish_date: publish_date || news.publish_date,
-      status: status || news.status
+      status: status || news.status,
+      attachments: attachments !== undefined ? attachments : news.attachments
     });
 
     res.json({
