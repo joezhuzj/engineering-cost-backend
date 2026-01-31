@@ -77,6 +77,41 @@ router.post('/submit', async (req, res) => {
 });
 
 /**
+ * 删除指定的新闻（用于清理爬取数据）
+ * POST /api/crawler/delete
+ */
+router.post('/delete', async (req, res) => {
+  try {
+    const crawlerKey = req.headers['x-crawler-key'];
+    const cronKey = process.env.CRON_SECRET || 'zjzj-crawler-2026';
+    
+    if (crawlerKey !== cronKey) {
+      return res.status(403).json({ success: false, message: '无效的密钥' });
+    }
+    
+    const { ids } = req.body;
+    
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, message: '请提供要删除的新闻ID数组' });
+    }
+    
+    const deleted = await News.destroy({ where: { id: ids } });
+    
+    console.log(`🗑️ 删除了 ${deleted} 条新闻`);
+    
+    res.json({
+      success: true,
+      message: `已删除 ${deleted} 条新闻`,
+      deleted: deleted
+    });
+    
+  } catch (error) {
+    console.error('删除失败:', error);
+    res.status(500).json({ success: false, message: '删除失败: ' + error.message });
+  }
+});
+
+/**
  * 触发爬取浙江造价网新闻
  * POST /api/crawler/sync
  * 使用密钥验证
