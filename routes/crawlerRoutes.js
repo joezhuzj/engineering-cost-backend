@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const { News, User } = require('../models');
+const crawlerService = require('../services/crawlerService');
 
 /**
  * 接收本地爬虫提交的新闻
@@ -71,6 +72,51 @@ router.post('/submit', async (req, res) => {
     res.status(500).json({
       success: false,
       message: '提交失败: ' + error.message
+    });
+  }
+});
+
+/**
+ * 触发爬取浙江造价网新闻
+ * POST /api/crawler/sync
+ * 使用密钥验证
+ */
+router.post('/sync', async (req, res) => {
+  try {
+    // 密钥验证
+    const crawlerKey = req.headers['x-crawler-key'];
+    const cronKey = process.env.CRON_SECRET || 'zjzj-crawler-2026';
+    
+    if (crawlerKey !== cronKey) {
+      return res.status(403).json({
+        success: false,
+        message: '无效的密钥'
+      });
+    }
+    
+    const { daysWithin = 30 } = req.body;
+    
+    console.log(`\n🕷️ 收到爬取请求，爬取${daysWithin}天内的新闻...`);
+    
+    // 异步执行爬取（不阻塞响应）
+    res.json({
+      success: true,
+      message: `爬取任务已启动，正在爬取${daysWithin}天内的新闻...`
+    });
+    
+    // 后台执行爬取
+    try {
+      const results = await crawlerService.syncNews(daysWithin);
+      console.log(`📊 爬取完成: 总计${results.total}条, 新增${results.added}条, 跳过${results.skipped}条, 失败${results.errors}条`);
+    } catch (err) {
+      console.error('❌ 爬取失败:', err.message);
+    }
+    
+  } catch (error) {
+    console.error('爬取请求失败:', error);
+    res.status(500).json({
+      success: false,
+      message: '爬取失败: ' + error.message
     });
   }
 });
