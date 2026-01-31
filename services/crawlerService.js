@@ -280,17 +280,41 @@ class CrawlerService {
       
       // 获取内容和附件链接
       const result = await page.evaluate((baseUrl) => {
-        const selectors = ['.article-content', '.news-content', '.content', '.detail-content', '#content', '.main-content'];
+        // 浙江造价网详情页的正文选择器
+        const contentSelectors = [
+          '#ContentTextb',           // 浙江造价网正文区域
+          '.detail-text',
+          '.article-body',
+          '.news-body'
+        ];
+        
         let text = '';
         let contentEl = null;
         
-        for (const selector of selectors) {
+        // 优先使用精确选择器
+        for (const selector of contentSelectors) {
           const el = document.querySelector(selector);
           if (el) {
-            const found = el.textContent.trim();
-            if (found && found.length > text.length) {
+            const found = el.innerText.trim();
+            if (found && found.length > 50) {
               text = found;
               contentEl = el;
+              break;
+            }
+          }
+        }
+        
+        // 如果没找到，尝试其他选择器
+        if (!text) {
+          const fallbackSelectors = ['.info', '.detail-content', '.article-content'];
+          for (const selector of fallbackSelectors) {
+            const el = document.querySelector(selector);
+            if (el) {
+              const found = el.innerText.trim();
+              if (found && found.length > text.length) {
+                text = found;
+                contentEl = el;
+              }
             }
           }
         }
